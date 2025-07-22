@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Meeting Booking System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e1e5e9;
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .time-slots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .time-slot {
+            position: relative;
+        }
+        
+        input[type="radio"] {
+            display: none;
+        }
+        
+        .time-label {
+            display: block;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .time-label:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: left 0.5s;
+        }
+        
+        .time-label:hover:before {
+            left: 100%;
+        }
+        
+        .time-label.booked {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            border-color: #f44336;
+            color: #c62828;
+            cursor: not-allowed;
+        }
+        
+        .time-label.loading {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-color: #ff9800;
+            color: #e65100;
+            animation: pulse 2s infinite;
+        }
+        
+        .time-label:not(.booked):not(.loading):hover {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+        
+        input[type="radio"]:checked + .time-label:not(.booked) {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        }
+        
+        .booked-indicator {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .submit-btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .submit-btn:hover:not(:disabled):before {
+            left: 100%;
+        }
+        
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        
+        .confirmation {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #d4f6d4, #a8e6a8);
+            border: 2px solid #4caf50;
+            border-radius: 15px;
+            color: #2e7d32;
+            margin-top: 20px;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .confirmation h2 {
+            margin-bottom: 15px;
+            color: #2e7d32;
+        }
+        
+        .bookings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        
+        .bookings-table th,
+        .bookings-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .bookings-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .bookings-table tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .bookings-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .delete-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .delete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .admin-login {
+            margin-bottom: 20px;
+            padding: 25px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .admin-status {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-status.logged-in {
+            background: linear-gradient(135deg, #d4f6d4, #a8e6a8);
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+        
+        .admin-status.logged-out {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            color: #c62828;
+            border: 2px solid #f44336;
+        }
+        
+        .admin-status.loading {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            color: #e65100;
+            border: 2px solid #ff9800;
+        }
+        
+        .action-btn {
+            background: linear-gradient(135deg, #4caf50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .action-btn.refresh {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+        }
+        
+        .action-btn.refresh:hover {
+            box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3);
+        }
+        
+        .action-btn.danger {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+        }
+        
+        .action-btn.danger:hover {
+            box-shadow: 0 8px 20px rgba(255, 152, 0, 0.3);
+        }
+        
+        .no-bookings {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 50px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-connected {
+            background: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        
+        .status-error {
+            background: #f44336;
+            box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+        }
+        
+        .status-loading {
+            background: #ff9800;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+        }
+        
+        @keyframes pulse {
+            0% { 
+                opacity: 1; 
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.7; 
+                transform: scale(1.1);
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1);
+            }
+        }
+        
+        .error-message {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            color: #c62828;
+            border: 2px solid #f44336;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .success-message {
+            background: linear-gradient(135deg, #d4f6d4, #a8e6a8);
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+            animation: slideIn 0.5s ease;
+        }
+        
+        .config-display {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border: 2px solid #2196f3;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .config-display h3 {
+            color: #1565c0;
+            margin-bottom: 15px;
+        }
+        
+        .config-display p {
+            margin: 8px 0;
+            color: #333;
+        }
+        
+        .config-display .label {
+            font-weight: 600;
+            color: #1565c0;
+        }
+        
+        .real-time-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-size: 12px;
+            font-weight: 500;
+            display: none;
+            animation: slideInRight 0.3s ease;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Real-time update indicator -->
+        <div id="realTimeIndicator" class="real-time-indicator">
+            🔄 Data synced in real-time
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('status')">🔥 Status</button>
+            <button class="tab" onclick="switchTab('booking')">📅 Book Meeting</button>
+            <button class="tab" onclick="switchTab('admin')">🔧 Admin Panel</button>
+        </div>
+        
+        <!-- Status Tab -->
+        <div id="status" class="tab-content active">
+            <h1>🔥 Firebase Status</h1>
+            
+            <div class="config-display">
+                <h3>📊 Firebase Configuration</h3>
+                <p><span class="label">Status:</span> <span id="firebaseStatus">Initializing...</span></p>
+            </div>
+            
+            <div id="connectionIndicator">
+                <span class="status-indicator status-loading"></span>
+                <span>Connecting to Firebase...</span>
+            </div>
+            
+            <button type="button" onclick="testFirebaseConnection()" class="action-btn refresh">🔌 Test Connection</button>
+            
+            <div id="statusMessages"></div>
+        </div>
+        
+        <!-- Booking Tab -->
+        <div id="booking" class="tab-content">
+            <h1>📅 Book Your Meeting</h1>
+            
+            <div id="bookingConnectionIndicator">
+                <span class="status-indicator status-loading"></span>
+                <span>Connecting to Firebase...</span>
+            </div>
+            
+            <form id="bookingForm">
+                <div class="form-group">
+                    <label for="studentName">Student Name</label>
+                    <input type="text" id="studentName" name="studentName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="groupNumber">Group Number</label>
+                    <input type="text" id="groupNumber" name="groupNumber" placeholder="e.g., Group 5" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="projectName">Project Name</label>
+                    <input type="text" id="projectName" name="projectName" placeholder="e.g., Smart Home Automation System" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Select Your Preferred Time Slot</label>
+                    <div class="time-slots" id="timeSlots">
+                        <div class="time-slot">
+                            <input type="radio" id="slot1" name="timeSlot" value="8:15 AM - 8:40 AM" required>
+                            <label for="slot1" class="time-label loading">8:15 AM - 8:40 AM <span class="booked-indicator">LOADING...</span></label>
+                        </div>
+                        <div class="time-slot">
+                            <input type="radio" id="slot2" name="timeSlot" value="8:40 AM - 9:05 AM">
+                            <label for="slot2" class="time-label loading">8:40 AM - 9:05 AM <span class="booked-indicator">LOADING...</span></label>
+                        </div>
+                        <div class="time-slot">
+                            <input type="radio" id="slot3" name="timeSlot" value="9:05 AM - 9:30 AM">
+                            <label for="slot3" class="time-label loading">9:05 AM - 9:30 AM <span class="booked-indicator">LOADING...</span></label>
+                        </div>
+                        <div class="time-slot">
+                            <input type="radio" id="slot4" name="timeSlot" value="9:30 AM - 9:55 AM">
+                            <label for="slot4" class="time-label loading">9:30 AM - 9:55 AM <span class="booked-indicator">LOADING...</span></label>
+                        </div>
+                        <div class="time-slot">
+                            <input type="radio" id="slot5" name="timeSlot" value="9:55 AM - 10:20 AM">
+                            <label for="slot5" class="time-label loading">9:55 AM - 10:20 AM <span class="booked-indicator">LOADING...</span></label>
+                        </div>
+                        <div class="time-slot">
+                            <input type="radio" id="slot6" name="timeSlot" value="10:20 AM - 11:45 AM">
+                            <label for="slot6" class="time-label loading">10:20 AM - 11:45 AM <span class="booked-indicator">LOADING...</span></label>
+                        </div>
+                        <div class="time-slot">
+                            <input type="radio" id="slot7" name="timeSlot" value="10:45 AM - 11:10 AM">
+                            <label for="slot7" class="time-label loading">10:45 AM - 11:10 AM <span class="booked-indicator">LOADING...</span></label>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="bookingSubmitBtn" disabled>🔥 Book Meeting with Firebase</button>
+            </form>
+            
+            <div id="confirmation" class="confirmation">
+                <h2>✅ Meeting Booked Successfully!</h2>
+                <p id="confirmationDetails"></p>
+            </div>
+        </div>
+        
+        <!-- Admin Panel Tab -->
+        <div id="admin" class="tab-content">
+            <h1>🔧 Admin Panel</h1>
+            
+            <div class="admin-login">
+                <div id="adminStatus" class="admin-status logged-out">
+                    🔒 Admin Access Required
+                </div>
+                
+                <div id="loginForm">
+                    <div class="form-group">
+                        <label for="adminPassword">Admin Password</label>
+                        <input type="password" id="adminPassword" placeholder="Enter admin password">
+                    </div>
+                    <button type="button" onclick="adminLogin()" class="submit-btn">🔑 Login as Admin</button>
+                </div>
+                
+                <div id="adminControls" style="display: none;">
+                    <button type="button" onclick="adminLogout()" class="submit-btn" style="background: linear-gradient(135deg, #f44336, #d32f2f);">🚪 Logout</button>
+                    <button type="button" onclick="refreshBookings()" class="action-btn refresh">🔄 Refresh Data</button>
+                    <button type="button" onclick="exportToJSON()" class="action-btn">📥 Export JSON</button>
+                    <button type="button" onclick="clearAllBookings()" class="action-btn danger">🗑️ Clear All</button>
+                    <button type="button" onclick="toggleRealTimeUpdates()" class="action-btn" id="realTimeBtn">⚡ Enable Real-time</button>
+                </div>
+            </div>
+            
+            <div id="bookingsList">
+                <h2>📋 Current Bookings <span id="bookingCount">(0)</span></h2>
+                <div id="bookingsContent">
+                    <div class="no-bookings">Please log in as admin to view bookings.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Hardcoded Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBIfCIMFfUL9ZP76YKqs_DA78LNKPDwyww",
+            authDomain: "ict936-weekly-meeting.firebaseapp.com",
+            projectId: "ict936-weekly-meeting",
+            storageBucket: "ict936-weekly-meeting.firebasestorage.app",
+            messagingSenderId: "368313899235",
+            appId: "1:368313899235:web:5f300616ef662de15e0dd6",
+            measurementId: "G-SLLF2GDE78"
+        };
+        
+        // Firebase app and database references
+        let app = null;
+        let db = null;
+        let isConnected = false;
+        let realTimeListener = null;
+        let realTimeEnabled = false;
+        
+        // Admin settings
+        const ADMIN_PASSWORD = "admin123";
+        let isAdminLoggedIn = false;
+        
+        // Data storage
+        let bookings = [];
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeFirebase();
+        });
+        
+        // Initialize Firebase immediately
+        async function initializeFirebase() {
+            updateConnectionStatus('loading', 'Initializing Firebase...');
+            updateBookingConnectionStatus('loading', 'Initializing Firebase...');
+            
+            try {
+                // Initialize Firebase
+                app = firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                
+                // Test connection
+                await testFirebaseConnection();
+                
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                updateConnectionStatus('error', 'Firebase initialization failed');
+                updateBookingConnectionStatus('error', 'Firebase initialization failed');
+                showStatusMessage(`❌ Firebase initialization failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Firebase connection test
+        async function testFirebaseConnection() {
+            updateConnectionStatus('loading', 'Testing Firebase connection...');
+            updateBookingConnectionStatus('loading', 'Testing Firebase connection...');
+            
+            try {
+                // Test connection by trying to read from Firestore
+                const testCollection = db.collection('bookings');
+                await testCollection.limit(1).get();
+                
+                isConnected = true;
+                updateConnectionStatus('connected', 'Connected to Firebase Firestore');
+                updateBookingConnectionStatus('connected', 'Connected to Firebase Firestore');
+                showStatusMessage('✅ Firebase connection successful! System ready to use.', 'success');
+                
+                // Update Firebase status
+                document.getElementById('firebaseStatus').innerHTML = 
+                    '<span style="color: #4caf50; font-weight: bold;">✅ Connected & Ready</span>';
+                
+                // Load existing bookings
+                await loadBookingsFromFirestore();
+                updateTimeSlots();
+                
+                // Enable booking form
+                document.getElementById('bookingSubmitBtn').disabled = false;
+                
+            } catch (error) {
+                isConnected = false;
+                updateConnectionStatus('error', 'Firebase connection failed');
+                updateBookingConnectionStatus('error', 'Firebase connection failed');
+                showStatusMessage(`❌ Firebase connection failed: ${error.message}`, 'error');
+                
+                // Update Firebase status
+                document.getElementById('firebaseStatus').innerHTML = 
+                    '<span style="color: #f44336; font-weight: bold;">❌ Connection Failed</span>';
+                
+                // Disable booking form
+                document.getElementById('bookingSubmitBtn').disabled = true;
+            }
+        }
+        
+        // Load bookings from Firestore
+        async function loadBookingsFromFirestore() {
+            if (!isConnected || !db) return;
+            
+            try {
+                const snapshot = await db.collection('bookings').orderBy('bookedAt', 'desc').get();
+                bookings = [];
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    bookings.push({
+                        id: doc.id,
+                        name: data.name || '',
+                        groupNumber: data.groupNumber || '',
+                        projectName: data.projectName || '',
+                        timeSlot: data.timeSlot || '',
+                        bookedAt: data.bookedAt || ''
+                    });
+                });
+                
+                updateBookingsList();
+                updateTimeSlots();
+                showRealTimeIndicator('Data loaded from Firebase');
+                
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                showStatusMessage('Error loading bookings from Firebase.', 'error');
+            }
+        }
+        
+        // Add booking to Firestore
+        async function addBookingToFirestore(booking) {
+            if (!isConnected || !db) {
+                throw new Error('Not connected to Firebase');
+            }
+            
+            try {
+                const docRef = await db.collection('bookings').add(booking);
+                return docRef.id;
+            } catch (error) {
+                throw new Error(`Failed to add booking: ${error.message}`);
+            }
+        }
+        
+        // Delete booking from Firestore
+        async function deleteBookingFromFirestore(bookingId) {
+            if (!isConnected || !db) {
+                throw new Error('Not connected to Firebase');
+            }
+            
+            try {
+                await db.collection('bookings').doc(bookingId).delete();
+                await loadBookingsFromFirestore(); // Reload data
+            } catch (error) {
+                throw new Error(`Failed to delete booking: ${error.message}`);
+            }
+        }
+        
+        // Tab switching
+        function switchTab(tabName) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'admin' && isAdminLoggedIn) {
+                updateBookingsList();
+            }
+        }
+        
+        // Booking form submission
+        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!isConnected) {
+                showStatusMessage('Please wait for Firebase connection.', 'error');
+                return;
+            }
+            
+            const name = document.getElementById('studentName').value;
+            const groupNumber = document.getElementById('groupNumber').value;
+            const projectName = document.getElementById('projectName').value;
+            const timeSlot = document.querySelector('input[name="timeSlot"]:checked').value;
+            
+            // Check if time slot is already booked
+            if (bookings.some(booking => booking.timeSlot === timeSlot)) {
+                showStatusMessage('This time slot is already booked. Please select another slot.', 'error');
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = document.getElementById('bookingSubmitBtn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '🔄 Booking...';
+            submitBtn.disabled = true;
+            
+            try {
+                // Create new booking
+                const newBooking = {
+                    name: name,
+                    groupNumber: groupNumber,
+                    projectName: projectName,
+                    timeSlot: timeSlot,
+                    bookedAt: new Date().toISOString()
+                };
+                
+                // Add to Firebase
+                const docId = await addBookingToFirestore(newBooking);
+                newBooking.id = docId;
+                
+                // Add to local array
+                bookings.push(newBooking);
+                
+                // Update UI
+                updateTimeSlots();
+                
+                // Show confirmation
+                document.getElementById('bookingForm').style.display = 'none';
+                document.getElementById('confirmation').style.display = 'block';
+                
+                document.getElementById('confirmationDetails').innerHTML = 
+                    `<strong>${name}</strong><br>
+                     Group: ${groupNumber}<br>
+                     Project: ${projectName}<br>
+                     Time: ${timeSlot}<br><br>
+                     Booking ID: ${docId}<br>
+                     Your booking has been saved to Firebase!`;
+                
+                showRealTimeIndicator('New booking added');
+                
+                // Reset form after 5 seconds
+                setTimeout(() => {
+                    document.getElementById('bookingForm').style.display = 'block';
+                    document.getElementById('confirmation').style.display = 'none';
+                    document.getElementById('bookingForm').reset();
+                }, 5000);
+                
+            } catch (error) {
+                showStatusMessage(`Error booking meeting: ${error.message}`, 'error');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // Update time slots display
+        function updateTimeSlots() {
+            const timeSlots = document.querySelectorAll('.time-label');
+            const bookedSlots = bookings.map(booking => booking.timeSlot);
+            
+            timeSlots.forEach(label => {
+                const radio = label.previousElementSibling;
+                const timeSlot = radio.value;
+                
+                // Remove all status classes
+                label.classList.remove('booked', 'loading');
+                
+                if (bookedSlots.includes(timeSlot)) {
+                    label.classList.add('booked');
+                    label.innerHTML = timeSlot + '<span class="booked-indicator">BOOKED</span>';
+                    radio.disabled = true;
+                } else {
+                    label.innerHTML = timeSlot;
+                    radio.disabled = false;
+                }
+            });
+        }
+        
+        // Admin login
+        function adminLogin() {
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password === ADMIN_PASSWORD) {
+                isAdminLoggedIn = true;
+                document.getElementById('adminStatus').textContent = '✅ Admin Access Granted';
+                document.getElementById('adminStatus').className = 'admin-status logged-in';
+                document.getElementById('loginForm').style.display = 'none';
+                document.getElementById('adminControls').style.display = 'block';
+                updateBookingsList();
+            } else {
+                showStatusMessage('Incorrect admin password!', 'error');
+                document.getElementById('adminPassword').value = '';
+            }
+        }
+        
+        // Admin logout
+        function adminLogout() {
+            isAdminLoggedIn = false;
+            document.getElementById('adminStatus').textContent = '🔒 Admin Access Required';
+            document.getElementById('adminStatus').className = 'admin-status logged-out';
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('adminControls').style.display = 'none';
+            document.getElementById('adminPassword').value = '';
+            
+            // Disable real-time updates
+            if (realTimeEnabled) {
+                toggleRealTimeUpdates();
+            }
+            
+            updateBookingsList();
+        }
+        
+        // Update bookings list for admin
+        function updateBookingsList() {
+            const bookingsContent = document.getElementById('bookingsContent');
+            const bookingCount = document.getElementById('bookingCount');
+            
+            if (!isAdminLoggedIn) {
+                bookingsContent.innerHTML = '<div class="no-bookings">Please log in as admin to view bookings.</div>';
+                bookingCount.textContent = '(0)';
+                return;
+            }
+            
+            if (!isConnected) {
+                bookingsContent.innerHTML = '<div class="no-bookings">Firebase connection required.</div>';
+                bookingCount.textContent = '(0)';
+                return;
+            }
+            
+            if (bookings.length === 0) {
+                bookingsContent.innerHTML = '<div class="no-bookings">No bookings found.</div>';
+                bookingCount.textContent = '(0)';
+                return;
+            }
+            
+            bookingCount.textContent = `(${bookings.length})`;
+            
+            const table = document.createElement('table');
+            table.className = 'bookings-table';
+            
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Student Name</th>
+                        <th>Group Number</th>
+                        <th>Project Name</th>
+                        <th>Time Slot</th>
+                        <th>Booked At</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${bookings.map(booking => `
+                        <tr>
+                            <td>${booking.id.substring(0, 8)}...</td>
+                            <td>${booking.name}</td>
+                            <td>${booking.groupNumber}</td>
+                            <td>${booking.projectName}</td>
+                            <td>${booking.timeSlot}</td>
+                            <td>${new Date(booking.bookedAt).toLocaleString()}</td>
+                            <td>
+                                <button class="delete-btn" onclick="deleteBooking('${booking.id}')">
+                                    🗑️ Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+            
+            bookingsContent.innerHTML = '';
+            bookingsContent.appendChild(table);
+        }
+        
+        // Delete booking (admin only)
+        async function deleteBooking(bookingId) {
+            if (!isAdminLoggedIn) {
+                showStatusMessage('Admin access required!', 'error');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete this booking?')) {
+                try {
+                    await deleteBookingFromFirestore(bookingId);
+                    showStatusMessage('Booking deleted successfully!', 'success');
+                    showRealTimeIndicator('Booking deleted');
+                    updateTimeSlots();
+                } catch (error) {
+                    showStatusMessage(`Error deleting booking: ${error.message}`, 'error');
+                }
+            }
+        }
+        
+        // Refresh bookings
+        async function refreshBookings() {
+            if (!isAdminLoggedIn) {
+                showStatusMessage('Admin access required!', 'error');
+                return;
+            }
+            
+            if (!isConnected) {
+                showStatusMessage('Firebase connection required.', 'error');
+                return;
+            }
+            
+            try {
+                await loadBookingsFromFirestore();
+                showStatusMessage('Bookings refreshed successfully!', 'success');
+            } catch (error) {
+                showStatusMessage(`Error refreshing bookings: ${error.message}`, 'error');
+            }
+        }
+        
+        // Export bookings as JSON
+        function exportToJSON() {
+            if (!isAdminLoggedIn) {
+                showStatusMessage('Admin access required!', 'error');
+                return;
+            }
+            
+            const data = {
+                bookings: bookings,
+                exportDate: new Date().toISOString(),
+                source: 'Firebase Firestore',
+                project: 'ict936-weekly-meeting',
+                version: '1.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `firebase-bookings-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showStatusMessage('Bookings exported successfully!', 'success');
+        }
+        
+        // Clear all bookings
+        async function clearAllBookings() {
+            if (!isAdminLoggedIn) {
+                showStatusMessage('Admin access required!', 'error');
+                return;
+            }
+            
+            if (!isConnected) {
+                showStatusMessage('Firebase connection required.', 'error');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to delete ALL bookings? This cannot be undone!')) {
+                if (confirm('This will permanently delete all booking data from Firebase. Are you absolutely sure?')) {
+                    try {
+                        const batch = db.batch();
+                        bookings.forEach(booking => {
+                            const docRef = db.collection('bookings').doc(booking.id);
+                            batch.delete(docRef);
+                        });
+                        
+                        await batch.commit();
+                        bookings = [];
+                        updateTimeSlots();
+                        updateBookingsList();
+                        showStatusMessage('All bookings cleared successfully!', 'success');
+                        showRealTimeIndicator('All data cleared');
+                    } catch (error) {
+                        showStatusMessage(`Error clearing bookings: ${error.message}`, 'error');
+                    }
+                }
+            }
+        }
+        
+        // Toggle real-time updates
+        function toggleRealTimeUpdates() {
+            if (!isAdminLoggedIn) {
+                showStatusMessage('Admin access required!', 'error');
+                return;
+            }
+            
+            if (!isConnected) {
+                showStatusMessage('Firebase connection required.', 'error');
+                return;
+            }
+            
+            const button = document.getElementById('realTimeBtn');
+            
+            if (realTimeEnabled) {
+                // Disable real-time updates
+                if (realTimeListener) {
+                    realTimeListener();
+                    realTimeListener = null;
+                }
+                realTimeEnabled = false;
+                button.textContent = '⚡ Enable Real-time';
+                button.style.background = 'linear-gradient(135deg, #4caf50, #45a049)';
+                showStatusMessage('Real-time updates disabled.', 'success');
+            } else {
+                // Enable real-time updates
+                realTimeListener = db.collection('bookings').onSnapshot((snapshot) => {
+                    bookings = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        bookings.push({
+                            id: doc.id,
+                            name: data.name || '',
+                            groupNumber: data.groupNumber || '',
+                            projectName: data.projectName || '',
+                            timeSlot: data.timeSlot || '',
+                            bookedAt: data.bookedAt || ''
+                        });
+                    });
+                    
+                    // Sort by booking date
+                    bookings.sort((a, b) => new Date(b.bookedAt) - new Date(a.bookedAt));
+                    
+                    updateBookingsList();
+                    updateTimeSlots();
+                    showRealTimeIndicator('Real-time sync active');
+                });
+                
+                realTimeEnabled = true;
+                button.textContent = '🔥 Disable Real-time';
+                button.style.background = 'linear-gradient(135deg, #ff9800, #f57c00)';
+                showStatusMessage('Real-time updates enabled! Changes will sync automatically.', 'success');
+            }
+        }
+        
+        // Utility functions
+        function updateConnectionStatus(status = 'error', message = 'Not connected') {
+            const indicator = document.getElementById('connectionIndicator');
+            const statusSpan = indicator.querySelector('.status-indicator');
+            const messageSpan = indicator.querySelector('span:last-child');
+            
+            statusSpan.className = `status-indicator status-${status}`;
+            messageSpan.textContent = message;
+        }
+        
+        function updateBookingConnectionStatus(status = 'error', message = 'Not connected') {
+            const indicator = document.getElementById('bookingConnectionIndicator');
+            const statusSpan = indicator.querySelector('.status-indicator');
+            const messageSpan = indicator.querySelector('span:last-child');
+            
+            statusSpan.className = `status-indicator status-${status}`;
+            messageSpan.textContent = message;
+        }
+        
+        function showStatusMessage(message, type = 'info') {
+            // Remove existing messages
+            const existingMessages = document.querySelectorAll('.error-message, .success-message');
+            existingMessages.forEach(msg => msg.remove());
+            
+            // Create new message
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'error' ? 'error-message' : 'success-message';
+            messageDiv.textContent = message;
+            
+            // Add to status messages container
+            const statusMessages = document.getElementById('statusMessages');
+            statusMessages.appendChild(messageDiv);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+        }
+        
+        function showRealTimeIndicator(message) {
+            const indicator = document.getElementById('realTimeIndicator');
+            indicator.textContent = `🔄 ${message}`;
+            indicator.style.display = 'block';
+            
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
