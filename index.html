@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase Meeting Booking System</title>
+    <title>ICT946 - Meeting Booking System</title>
     <style>
         * {
             margin: 0;
@@ -479,6 +479,104 @@
             color: #1565c0;
         }
         
+        .timeslot-manager {
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            border: 2px solid #9c27b0;
+            border-radius: 15px;
+        }
+
+        .timeslot-manager h3 {
+            color: #6a1b9a;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .timeslot-list {
+            list-style: none;
+            margin-bottom: 15px;
+        }
+
+        .timeslot-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            border: 1.5px solid #ce93d8;
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .timeslot-item:hover {
+            box-shadow: 0 4px 12px rgba(156, 39, 176, 0.15);
+        }
+
+        .timeslot-item .slot-text {
+            flex: 1;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .timeslot-item input.slot-edit-input {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1.5px solid #9c27b0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .slot-btn {
+            background: none;
+            border: 1.5px solid;
+            border-radius: 8px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .slot-btn.edit { border-color: #2196f3; color: #2196f3; }
+        .slot-btn.edit:hover { background: #2196f3; color: white; }
+        .slot-btn.save { border-color: #4caf50; color: #4caf50; }
+        .slot-btn.save:hover { background: #4caf50; color: white; }
+        .slot-btn.cancel { border-color: #ff9800; color: #ff9800; }
+        .slot-btn.cancel:hover { background: #ff9800; color: white; }
+        .slot-btn.remove { border-color: #f44336; color: #f44336; }
+        .slot-btn.remove:hover { background: #f44336; color: white; }
+        .slot-btn.up, .slot-btn.down { border-color: #9c27b0; color: #9c27b0; font-size: 11px; }
+        .slot-btn.up:hover, .slot-btn.down:hover { background: #9c27b0; color: white; }
+
+        .add-slot-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .add-slot-row input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #ce93d8;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .add-slot-row input:focus {
+            outline: none;
+            border-color: #9c27b0;
+        }
+
+        .action-btn.purple {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+        }
+
+        .action-btn.purple:hover {
+            box-shadow: 0 8px 20px rgba(156, 39, 176, 0.3);
+        }
+
         .real-time-indicator {
             position: fixed;
             top: 20px;
@@ -539,7 +637,7 @@
         
         <!-- Booking Tab -->
         <div id="booking" class="tab-content">
-            <h1>📅 Book Your Meeting</h1>
+            <h1>📅 ICT946 - Book Your Meeting</h1>
             
             <div id="bookingConnectionIndicator">
                 <span class="status-indicator status-loading"></span>
@@ -628,6 +726,7 @@
                 
                 <div id="adminControls" style="display: none;">
                     <button type="button" onclick="adminLogout()" class="submit-btn" style="background: linear-gradient(135deg, #f44336, #d32f2f);">🚪 Logout</button>
+                    <button type="button" onclick="toggleSlotManager()" class="action-btn purple" id="manageSlotBtn">🕐 Manage Slots</button>
                     <button type="button" onclick="refreshBookings()" class="action-btn refresh">🔄 Refresh Data</button>
                     <button type="button" onclick="exportToJSON()" class="action-btn">📥 Export JSON</button>
                     <button type="button" onclick="clearAllBookings()" class="action-btn danger">🗑️ Clear All</button>
@@ -635,6 +734,16 @@
                 </div>
             </div>
             
+            <div id="timeslotManager" class="timeslot-manager" style="display:none;">
+                <h3>🕐 Manage Time Slots</h3>
+                <p style="color:#6a1b9a; font-size:13px; margin-bottom:12px;">Add, edit, reorder, or remove time slots. Changes apply instantly to the booking form.</p>
+                <ul class="timeslot-list" id="adminSlotList"></ul>
+                <div class="add-slot-row">
+                    <input type="text" id="newSlotInput" placeholder="e.g. 11:00 AM - 11:20 AM" />
+                    <button type="button" class="action-btn purple" onclick="addTimeSlot()">➕ Add Slot</button>
+                </div>
+            </div>
+
             <div id="bookingsList">
                 <h2>📋 Current Bookings <span id="bookingCount">(0)</span></h2>
                 <div id="bookingsContent">
@@ -719,8 +828,9 @@
                 document.getElementById('firebaseStatus').innerHTML = 
                     '<span style="color: #4caf50; font-weight: bold;">✅ Connected & Ready</span>';
                 
-                // Load existing bookings
+                // Load existing bookings and time slots
                 await loadBookingsFromFirestore();
+                await loadTimeSlotsFromFirestore();
                 updateTimeSlots();
                 
                 // Enable booking form
@@ -923,6 +1033,7 @@
                 document.getElementById('adminStatus').className = 'admin-status logged-in';
                 document.getElementById('loginForm').style.display = 'none';
                 document.getElementById('adminControls').style.display = 'block';
+                document.getElementById('timeslotManager').style.display = 'none';
                 updateBookingsList();
             } else {
                 showStatusMessage('Incorrect admin password!', 'error');
@@ -937,6 +1048,8 @@
             document.getElementById('adminStatus').className = 'admin-status logged-out';
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('adminControls').style.display = 'none';
+            document.getElementById('timeslotManager').style.display = 'none';
+            document.getElementById('manageSlotBtn').textContent = '🕐 Manage Slots';
             document.getElementById('adminPassword').value = '';
             
             // Disable real-time updates
@@ -1216,6 +1329,145 @@
                 indicator.style.display = 'none';
             }, 3000);
         }
+        // ── Time Slot Management (Firebase-persisted) ────────────────────────
+
+        const DEFAULT_TIME_SLOTS = [
+            "8:15 AM - 8:35 AM",
+            "8:35 AM - 8:55 AM",
+            "8:55 AM - 9:15 AM",
+            "9:15 AM - 9:35 AM",
+            "9:35 AM - 9:55 AM",
+            "9:55 AM - 10:15 AM",
+            "10:15 AM - 11:35 AM",
+            "10:35 AM - 11:55 AM"
+        ];
+
+        let timeSlots = [...DEFAULT_TIME_SLOTS];
+
+        // Load time slots from Firestore; fall back to defaults if none saved
+        async function loadTimeSlotsFromFirestore() {
+            if (!isConnected || !db) return;
+            try {
+                const doc = await db.collection('settings').doc('timeSlots').get();
+                if (doc.exists && Array.isArray(doc.data().slots) && doc.data().slots.length > 0) {
+                    timeSlots = doc.data().slots;
+                } else {
+                    // First run: save defaults so they're in Firestore
+                    await saveTimeSlotsToFirestore();
+                }
+            } catch (error) {
+                console.error('Error loading time slots:', error);
+            }
+            rebuildBookingSlots();
+        }
+
+        // Save current timeSlots array to Firestore
+        async function saveTimeSlotsToFirestore() {
+            if (!isConnected || !db) return;
+            try {
+                await db.collection('settings').doc('timeSlots').set({ slots: timeSlots });
+            } catch (error) {
+                showStatusMessage('Error saving time slots: ' + error.message, 'error');
+            }
+        }
+
+        function toggleSlotManager() {
+            const mgr = document.getElementById('timeslotManager');
+            const btn = document.getElementById('manageSlotBtn');
+            const visible = mgr.style.display !== 'none';
+            mgr.style.display = visible ? 'none' : 'block';
+            btn.textContent = visible ? '🕐 Manage Slots' : '✖ Close Slot Manager';
+            if (!visible) renderAdminSlotList();
+        }
+
+        function renderAdminSlotList() {
+            const list = document.getElementById('adminSlotList');
+            list.innerHTML = '';
+            timeSlots.forEach((slot, i) => {
+                const li = document.createElement('li');
+                li.className = 'timeslot-item';
+                li.dataset.index = i;
+                li.innerHTML = `
+                    <span class="slot-text">${slot}</span>
+                    <button class="slot-btn up" onclick="moveSlot(${i}, -1)" ${i === 0 ? 'disabled style="opacity:.4"' : ''}>▲</button>
+                    <button class="slot-btn down" onclick="moveSlot(${i}, 1)" ${i === timeSlots.length - 1 ? 'disabled style="opacity:.4"' : ''}>▼</button>
+                    <button class="slot-btn edit" onclick="startEditSlot(${i})">✏️ Edit</button>
+                    <button class="slot-btn remove" onclick="removeSlot(${i})">🗑️ Remove</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function startEditSlot(i) {
+            const li = document.getElementById('adminSlotList').children[i];
+            const current = timeSlots[i];
+            li.innerHTML = `
+                <input class="slot-edit-input" id="editInput_${i}" value="${current}" />
+                <button class="slot-btn save" onclick="saveEditSlot(${i})">✔ Save</button>
+                <button class="slot-btn cancel" onclick="renderAdminSlotList()">✖ Cancel</button>
+            `;
+            document.getElementById(`editInput_${i}`).focus();
+        }
+
+        async function saveEditSlot(i) {
+            const val = document.getElementById(`editInput_${i}`).value.trim();
+            if (!val) { showStatusMessage('Slot label cannot be empty.', 'error'); return; }
+            timeSlots[i] = val;
+            await saveTimeSlotsToFirestore();
+            renderAdminSlotList();
+            rebuildBookingSlots();
+            showStatusMessage(`Slot updated to "${val}"`, 'success');
+        }
+
+        async function removeSlot(i) {
+            if (!confirm(`Remove slot "${timeSlots[i]}"?`)) return;
+            timeSlots.splice(i, 1);
+            await saveTimeSlotsToFirestore();
+            renderAdminSlotList();
+            rebuildBookingSlots();
+            showStatusMessage('Time slot removed.', 'success');
+        }
+
+        async function moveSlot(i, dir) {
+            const j = i + dir;
+            if (j < 0 || j >= timeSlots.length) return;
+            [timeSlots[i], timeSlots[j]] = [timeSlots[j], timeSlots[i]];
+            await saveTimeSlotsToFirestore();
+            renderAdminSlotList();
+            rebuildBookingSlots();
+        }
+
+        async function addTimeSlot() {
+            const input = document.getElementById('newSlotInput');
+            const val = input.value.trim();
+            if (!val) { showStatusMessage('Please enter a slot label.', 'error'); return; }
+            if (timeSlots.includes(val)) { showStatusMessage('That slot already exists.', 'error'); return; }
+            timeSlots.push(val);
+            input.value = '';
+            await saveTimeSlotsToFirestore();
+            renderAdminSlotList();
+            rebuildBookingSlots();
+            showStatusMessage(`Slot "${val}" added and saved.`, 'success');
+        }
+
+        // Rebuild the booking form's radio buttons from the timeSlots array
+        function rebuildBookingSlots() {
+            const container = document.getElementById('timeSlots');
+            const bookedSlotValues = bookings.map(b => b.timeSlot);
+            container.innerHTML = timeSlots.map((slot, i) => {
+                const isBooked = bookedSlotValues.includes(slot);
+                return `
+                    <div class="time-slot">
+                        <input type="radio" id="slot${i + 1}" name="timeSlot" value="${slot}" ${isBooked ? 'disabled' : ''}>
+                        <label for="slot${i + 1}" class="time-label ${isBooked ? 'booked' : ''}">
+                            ${slot}${isBooked ? '<span class="booked-indicator">BOOKED</span>' : ''}
+                        </label>
+                    </div>`;
+            }).join('');
+        }
+
+        // ── End Time Slot Management ──────────────────────────────────────────
+
     </script>
 </body>
 </html>
